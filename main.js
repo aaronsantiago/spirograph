@@ -1,5 +1,6 @@
 
-let palette = [0x69D2E7, 0xA7DBD8, 0xF38630, 0xFA6900, 0xE0E4CC]
+// let palette = [0x69D2E7, 0xA7DBD8, 0xF38630, 0xFA6900, 0xE0E4CC]
+let palette = [randomColor(), randomColor(), randomColor(), randomColor(), randomColor()]
 let materials = [];
 for(let i = 0; i < palette.length; i++) {
   let material = new THREE.MeshPhongMaterial( {
