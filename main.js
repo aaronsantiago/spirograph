@@ -72,6 +72,8 @@ let spawnRate = .01;
 let spawnRateBase = .05;
 let spawnRateRange = .3;
 
+let framerate = 10 + (1 - Math.random()) * Math.random() * 200;
+
 function setSpawnRate() {
   spawnRate = spawnRateBase + Math.random() * spawnRateRange;
 }
@@ -156,7 +158,7 @@ requestAnimationFrame(function animate(nowMsec){
   lastTimeMsec = nowMsec;
 
   // call each update function
-  deltaMsec = 1/344;
+  deltaMsec = 1/framerate;
   while (timeCounter > 0) {
     timeCounter -= deltaMsec;
     if (timeCounter > .5) { // frame skip if we are lower than 2fps
