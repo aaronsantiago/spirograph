@@ -1,6 +1,7 @@
 
 // let palette = [0x69D2E7, 0xA7DBD8, 0xF38630, 0xFA6900, 0xE0E4CC]
-let palette = [randomColor(), randomColor(), randomColor(), randomColor(), randomColor()]
+let main = randomColor();
+let palette = [main, randomColor({hue:main}), randomColor({hue:main}), randomColor({hue:main}), randomColor({hue:main})]
 let materials = [];
 for(let i = 0; i < palette.length; i++) {
   let material = new THREE.MeshPhongMaterial( {
@@ -28,25 +29,25 @@ renderer.autoClearColor = false;
 //renderer.setClearColor(palette[0], 1)
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
-renderer.domElement.addEventListener('touchstart', function(ev) {
-  for (let i = 0; i < ev.touches.length; i++) {
-    fire(
-        (ev.targetTouches[i].clientX - window.innerWidth/2)
-            / window.innerWidth,
-        -(ev.targetTouches[i].clientY - window.innerHeight/2)
-            / window.innerHeight
-      );
-  }
-  ev.preventDefault();
-});
-renderer.domElement.addEventListener('mousedown', function(ev) {
-    fire(
-        (ev.clientX - window.innerWidth/2)
-            / window.innerWidth,
-        -(ev.clientY - window.innerHeight/2)
-            / window.innerHeight
-      );
-});
+// renderer.domElement.addEventListener('touchstart', function(ev) {
+//   for (let i = 0; i < ev.touches.length; i++) {
+//     fire(
+//         (ev.targetTouches[i].clientX - window.innerWidth/2)
+//             / window.innerWidth,
+//         -(ev.targetTouches[i].clientY - window.innerHeight/2)
+//             / window.innerHeight
+//       );
+//   }
+//   ev.preventDefault();
+// });
+// renderer.domElement.addEventListener('mousedown', function(ev) {
+//     fire(
+//         (ev.clientX - window.innerWidth/2)
+//             / window.innerWidth,
+//         -(ev.clientY - window.innerHeight/2)
+//             / window.innerHeight
+//       );
+// });
 
 // dynamic aspect cameras
 let camera  = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 4000);
@@ -64,12 +65,29 @@ window.addEventListener('resize', function(){
 }, false)
 
 camera.position.z = 1;
-camera.position.y = -.07;
-camera.rotation.x = .2;
+// camera.position.y = -.07;
+// camera.rotation.x = .2;
 
 let timeScales = [];
 let keyboard    = new THREEx.KeyboardState();
 
+
+//////////////////////////////////////////////////////////////////////////////////
+//      lighting
+//////////////////////////////////////////////////////////////////////////////////
+
+let directionalLight = new THREE.DirectionalLight( 0xffffff, .3 );
+directionalLight.position.set( 0, 1000, 0 );
+scene.add( directionalLight ); 
+
+let amb = new THREE.AmbientLight( 0x222222 );
+let light = new THREE.HemisphereLight( 0xffffff, 0xffffff, .3 );
+scene.add( amb );
+scene.add( light );
+
+var pointLight = new THREE.PointLight( 0xffffff, 1, .5 );
+pointLight.position.set( 0, .5, 0 );
+scene.add( pointLight );
 
 //////////////////////////////////////////////////////////////////////////////////
 //      add an object in the scene
@@ -80,11 +98,11 @@ let moneys = [];
 let screenBounds = 1;
 let moneyGeometry = new THREE.BoxGeometry(.01, .01, .01);
 let moneyContainer = new THREE.Object3D();
-let numMoney = 80;
+let numMoney = 10;
 let effectScaleBase = 400000;
 let effectScale = effectScaleBase;
 let spawnCounter = 0;
-let spawnRate = .4;
+let spawnRate = .01;
 
 let spawnRateChangeCounter = 0;
 let spawnRateChangeRate = .1;
@@ -155,63 +173,94 @@ function spawnMoney(x, y, z, mass, vy) {
   if (Math.abs(money.mass) < 2) {
     money.mass = Math.random() * 15 + 5;
   }
+  let container = new THREE.Object3D();
+  let container2 = new THREE.Object3D();
   let mesh = new THREE.Mesh(moneyGeometry, materials[Math.floor(Math.random() * materials.length)]);
-  mesh.position.set(x || Math.random() - .5, 
-                    y || Math.random() - .5,
-                    z || Math.random() - .5);
+  mesh.position.set(Math.random() - .5, 
+                    Math.random() - .5,
+                    0);
   mesh.rotation.set(
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2);
   money.mesh = mesh;
   
-  moneyContainer.add(mesh);
+  moneyContainer.add(container);
+  container2.add(mesh);
+  container.add(container2);
+  container.position.z = 0;
+  container2.position.set(
+    mesh.position.x + (Math.random() - .5)/3,
+    mesh.position.y + (Math.random() - .5)/3,
+    0);
+  container.rotation.z = Math.random() * Math.PI * 2;
   moneys.push(money);
+  let outerRotationFactor = Math.random() / 10 + 1/40;
+  let innerRotationFactor = Math.random() * 2 + 1;
   updaters.push(function(i, dt, t) {
-    mesh.position.x += money.vx * dt;
-    mesh.position.y += money.vy * dt;
-    mesh.position.z += money.vz * dt;
-    if (money.collided || money.mesh.position.length() > screenBounds) {
-      moneyContainer.remove(mesh);
-      moneys.splice(moneys.indexOf(money), 1);
-      return true;
-    }
-    let meshDirection = new THREE.Vector3(money.vx, money.vy, money.vz);
-    if(meshDirection.length() > .1) {
-      money.collided = true;
-    }
-    if(meshDirection.length() == 0) {
-      meshDirection.x = 1;
-    }
-    else {
-      meshDirection.normalize();
-    }
-    let neutralDirection = new THREE.Vector3(1, 0, 0);
-    mesh.quaternion.setFromUnitVectors(neutralDirection, meshDirection);
+    // mesh.position.x += money.vx * dt;
+    // mesh.position.y += money.vy * dt;
+    container.rotation.z += dt * outerRotationFactor;
+    container2.rotation.z += dt * innerRotationFactor;
+    container.position.z -= dt/10;
+    mesh.rotation.z += dt * 4;
 
-    for(let oMoney of moneys) {
-      if(oMoney === money) {
-        continue;
-      }
-      let moneyVector = new THREE.Vector3(
-        oMoney.mesh.position.x - money.mesh.position.x,
-        oMoney.mesh.position.y - money.mesh.position.y,
-        oMoney.mesh.position.z - money.mesh.position.z);
-      let moneyDistSq = moneyVector.lengthSq();
-      if (moneyDistSq < .01) {
-        moneyDistSq *= -8;
-      }
-      if(moneyDistSq != 0){
-        moneyVector.normalize();
-        money.vx +=
-          moneyVector.x / moneyDistSq / effectScale * dt * oMoney.mass;
-        money.vy +=
-          moneyVector.y / moneyDistSq / effectScale * dt * oMoney.mass + (dt/(60000 - t/50))
-          / novaModifier;
-        money.vz +=
-          moneyVector.z / moneyDistSq / effectScale * dt * oMoney.mass;
-      }
-    }
+    amb.intensity += dt/100;
+    // if (container.position.z < -3) {
+    //   // container.position.z -= 4;
+    //   moneyContainer.remove(container);
+    //   moneys.splice(moneys.indexOf(money), 1);
+    //   return true;
+    // }
+    // if (Math.random() < .001) {
+    //   moneyContainer.remove(container);
+    //   moneys.splice(moneys.indexOf(money), 1);
+    //   return true;
+    // }
+    // mesh.position.x = Math.sin(t) * 1;
+    // mesh.position.y = Math.cos(t) * 1;
+    // mesh.position.z += money.vz * dt;
+    // if (money.collided || money.mesh.position.length() > screenBounds) {
+    //   moneyContainer.remove(mesh);
+    //   moneys.splice(moneys.indexOf(money), 1);
+    //   return true;
+    // }
+    // let meshDirection = new THREE.Vector3(money.vx, money.vy, money.vz);
+    // if(meshDirection.length() > .1) {
+    //   money.collided = true;
+    // }
+    // if(meshDirection.length() == 0) {
+    //   meshDirection.x = 1;
+    // }
+    // else {
+    //   meshDirection.normalize();
+    // }
+    // let neutralDirection = new THREE.Vector3(1, 0, 0);
+    // mesh.quaternion.setFromUnitVectors(neutralDirection, meshDirection);
+
+    // for(let oMoney of moneys) {
+    //   if(oMoney === money) {
+    //     continue;
+    //   }
+    //   let moneyVector = new THREE.Vector3(
+    //     oMoney.mesh.position.x - money.mesh.position.x,
+    //     oMoney.mesh.position.y - money.mesh.position.y,
+    //     oMoney.mesh.position.z - money.mesh.position.z);
+    //   let moneyDistSq = moneyVector.lengthSq();
+    //   if (moneyDistSq < .01) {
+    //     moneyDistSq *= -8;
+    //   }
+    //   if(moneyDistSq != 0){
+    //     moneyVector.normalize();
+    //     money.vx +=
+    //       moneyVector.x / moneyDistSq / effectScale * dt * oMoney.mass;
+    //     money.vy +=
+    //       moneyVector.y / moneyDistSq / effectScale * dt * oMoney.mass + (dt/(60000 - t/50))
+    //       / novaModifier;
+    //     money.vz +=
+    //       moneyVector.z / moneyDistSq / effectScale * dt * oMoney.mass;
+    //   }
+    // }
 
   });
 }
@@ -231,23 +280,6 @@ updaters.push(function(i, dt, t) {
 let cullCounter = 0;
 let cullRate = 1;
 let expected = 0;
-
-//////////////////////////////////////////////////////////////////////////////////
-//      lighting
-//////////////////////////////////////////////////////////////////////////////////
-
-let directionalLight = new THREE.DirectionalLight( 0xffffff, .3 );
-directionalLight.position.set( 0, 1000, 0 );
-scene.add( directionalLight ); 
-
-let amb = new THREE.AmbientLight( 0x222222 );
-let light = new THREE.HemisphereLight( 0xffffff, 0xffffff, .3 );
-scene.add( amb );
-scene.add( light );
-
-var pointLight = new THREE.PointLight( 0xffffff, 1, .5 );
-pointLight.position.set( 0, .5, 0 );
-scene.add( pointLight );
 
 //////////////////////////////////////////////////////////////////////////////////
 //      render the whole thing on the page
@@ -280,6 +312,10 @@ requestAnimationFrame(function animate(nowMsec){
   //timeCounter = Math.min(timeCounter, 1/60);
   while (timeCounter > 0) {
     timeCounter -= deltaMsec;
+    if (timeCounter > deltaMsec * 100) {
+      timeCounter = 0;
+    }
+    // timeCounter = 0;
     nowTime += deltaMsec;
     for(let i = updaters.length - 1; i >= 0; i--)
     {
