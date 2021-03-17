@@ -25,8 +25,7 @@ let renderer = new THREE.WebGLRenderer({
   antialias : true,
   preserveDrawingBuffer: true
 });
-renderer.autoClearColor = false;
-//renderer.setClearColor(palette[0], 1)
+renderer.setClearColor(randomColor({hue:main, luminosity: "dark"}), 1)
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
@@ -45,7 +44,7 @@ camera.position.z = 1;
 //      lighting
 //////////////////////////////////////////////////////////////////////////////////
 
-let directionalLight = new THREE.DirectionalLight( 0xffffff, .3 );
+let directionalLight = new THREE.DirectionalLight( 0xffffff, .8 );
 directionalLight.position.set( 0, 1000, 0 );
 scene.add( directionalLight ); 
 
@@ -64,7 +63,7 @@ scene.add( pointLight );
 
 let dots = [];
 let screenBounds = 1;
-let dotGeometry = new THREE.BoxGeometry(.01, .01, .01);
+let dotGeometry = new THREE.BoxGeometry(.2 * Math.random() * Math.random() + .003, .1 * Math.random() * Math.random() * Math.random() + .003, .01);
 let dotContainer = new THREE.Object3D();
 let numDot = 10;
 let spawnCounter = 0;
@@ -109,7 +108,7 @@ function spawnDot(x, y, z, mass, vy) {
   dotContainer.add(outerRotation);
   innerRotation.add(mesh);
   outerRotation.add(innerRotation);
-  
+
   outerRotation.position.z = 0;
   innerRotation.position.set(
     mesh.position.x + (Math.random() - .5)/3,
@@ -125,22 +124,24 @@ function spawnDot(x, y, z, mass, vy) {
 
     outerRotation.rotation.z += dt * outerRotationFactor;
     innerRotation.rotation.z += dt * innerRotationFactor;
-
-    outerRotation.position.z -= dt/10;
     
     mesh.rotation.z += dt * 4;
-    
-    amb.intensity += dt/100;
 
   });
 }
+updaters.push(function(i, dt, t){
+    
+    dotContainer.position.z -= dt/10 * Math.sqrt(t)/100;
+    amb.intensity += dt/10;    
+})
 
 //////////////////////////////////////////////////////////////////////////////////
 //      render the whole thing on the page
 //////////////////////////////////////////////////////////////////////////////////
 // render the scene
 updaters.push(function(){
-    renderer.render( scene, camera );       
+  renderer.render( scene, camera );       
+  renderer.autoClearColor = false;
 })
 
 // run the rendering loop
@@ -155,10 +156,10 @@ requestAnimationFrame(function animate(nowMsec){
   lastTimeMsec = nowMsec;
 
   // call each update function
-  deltaMsec = 1/144;
+  deltaMsec = 1/344;
   while (timeCounter > 0) {
     timeCounter -= deltaMsec;
-    if (timeCounter > deltaMsec * 100) { // frame skip if we are lower than 2fps
+    if (timeCounter > .5) { // frame skip if we are lower than 2fps
       timeCounter = 0;
     }
     nowTime += deltaMsec;
